@@ -204,14 +204,13 @@ class Root_Query {
 						if ( empty( $order_id ) ) {
 							/* translators: %1$s: ID type, %2$s: ID value */
 							throw new UserError( sprintf( __( 'No order ID was found corresponding to the %1$s: %2$s', 'wp-graphql-woocommerce' ), $id_type, $id ) );
-						} elseif ( get_post( $order_id )->post_type !== 'shop_order' ) {
+						} elseif ( false === wc_get_order( $order_id ) ) {
 							/* translators: %1$s: ID type, %2$s: ID value */
 							throw new UserError( sprintf( __( 'No order exists with the %1$s: %2$s', 'wp-graphql-woocommerce' ), $id_type, $id ) );
 						}
 
 						// Check if user authorized to view order.
-						$post_type     = get_post_type_object( 'shop_order' );
-						$is_authorized = current_user_can( $post_type->cap->edit_others_posts );
+						$is_authorized = current_user_can( 'edit_others_shop_orders' );
 						if ( get_current_user_id() ) {
 							$orders = wc_get_orders(
 								[
@@ -228,7 +227,7 @@ class Root_Query {
 							}
 						}
 
-						$order = $is_authorized ? Factory::resolve_crud_object( $order_id, $context ) : null;
+						$order = $is_authorized ? Factory::resolve_crud_object( $order_id, $context, 'wc_order' ) : null;
 
 						return $order;
 					},
@@ -311,16 +310,17 @@ class Root_Query {
 						if ( empty( $refund_id ) ) {
 							/* translators: %1$s: ID type, %2$s: ID value */
 							throw new UserError( sprintf( __( 'No refund ID was found corresponding to the %1$s: %2$s', 'wp-graphql-woocommerce' ), $id_type, $id ) );
-						} elseif ( get_post( $refund_id )->post_type !== 'shop_order_refund' ) {
+						}
+
+						$refund   = \wc_get_order( $refund_id );
+						if (  false === $refund || 'shop_order_refund' !== $refund->get_type() ) {
 							/* translators: %1$s: ID type, %2$s: ID value */
 							throw new UserError( sprintf( __( 'No refund exists with the %1$s: %2$s', 'wp-graphql-woocommerce' ), $id_type, $id ) );
 						}
 
 						// Check if user authorized to view order.
-						$post_type     = get_post_type_object( 'shop_order_refund' );
-						$is_authorized = current_user_can( $post_type->cap->edit_others_posts );
+						$is_authorized = current_user_can( 'edit_others_shop_orders' );
 						if ( get_current_user_id() ) {
-							$refund   = \wc_get_order( $refund_id );
 							$order_id = $refund->get_parent_id();
 							$orders   = wc_get_orders(
 								[
@@ -337,7 +337,7 @@ class Root_Query {
 							}
 						}
 
-						$refund = $is_authorized ? Factory::resolve_crud_object( $refund_id, $context ) : null;
+						$refund = $is_authorized ? Factory::resolve_crud_object( $refund_id, $context, 'wc_order' ) : null;
 
 						return $refund;
 					},

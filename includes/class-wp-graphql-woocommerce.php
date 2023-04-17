@@ -140,6 +140,9 @@ if ( ! class_exists( '\WPGraphQL\WooCommerce\WP_GraphQL_WooCommerce' ) ) :
 		private function includes() {
 			$include_directory_path = get_includes_directory();
 
+			// Include the HPOS compatibility trait file.
+			require $include_directory_path . 'class-hpos-compatibility.php';
+
 			// Include util class files.
 			require $include_directory_path . 'utils/class-ql-session-handler.php';
 			require $include_directory_path . 'utils/class-session-transaction-manager.php';
@@ -160,6 +163,7 @@ if ( ! class_exists( '\WPGraphQL\WooCommerce\WP_GraphQL_WooCommerce' ) ) :
 			require $include_directory_path . 'data/loader/class-wc-cpt-loader.php';
 			require $include_directory_path . 'data/loader/class-wc-customer-loader.php';
 			require $include_directory_path . 'data/loader/class-wc-db-loader.php';
+			require $include_directory_path . 'data/loader/class-wc-order-loader.php';
 
 			// Include connection resolver trait/class files.
 			require $include_directory_path . 'data/connection/trait-wc-db-loader-common.php';

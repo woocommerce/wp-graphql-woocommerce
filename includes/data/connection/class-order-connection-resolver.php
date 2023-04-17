@@ -18,8 +18,6 @@ use WPGraphQL\WooCommerce\Model\Order;
 
 /**
  * Class Order_Connection_Resolver
- *
- * @deprecated v0.10.0
  */
 class Order_Connection_Resolver extends AbstractConnectionResolver {
 	/**
@@ -60,7 +58,7 @@ class Order_Connection_Resolver extends AbstractConnectionResolver {
 	 * @return string
 	 */
 	public function get_loader_name() {
-		return 'wc_post';
+		return 'wc_order';
 	}
 
 	/**
@@ -71,7 +69,7 @@ class Order_Connection_Resolver extends AbstractConnectionResolver {
 	 * @return mixed|Order|null
 	 */
 	public function get_node_by_id( $id ) {
-		return $this->get_cpt_model_by_id( $id );
+		return new Order( $id );
 	}
 
 	/**
@@ -80,8 +78,7 @@ class Order_Connection_Resolver extends AbstractConnectionResolver {
 	 * @return bool
 	 */
 	public function should_execute() {
-		$post_type_obj = get_post_type_object( $this->post_type );
-		if ( current_user_can( $post_type_obj->cap->edit_posts ) ) {
+		if ( current_user_can( 'edit_shop_orders' ) ) {
 			return true;
 		} elseif ( isset( $this->query_args['customer_id'] ) ) {
 			return get_current_user_id() === $this->query_args['customer_id'];
@@ -181,7 +178,7 @@ class Order_Connection_Resolver extends AbstractConnectionResolver {
 	 *
 	 * @return array
 	 */
-	public function get_ids() {
+	public function get_ids_from_query() {
 		return ! empty( $this->query->get_orders() ) ? $this->query->get_orders() : [];
 	}
 
@@ -307,6 +304,15 @@ class Order_Connection_Resolver extends AbstractConnectionResolver {
 	 * @return bool
 	 */
 	public function is_valid_offset( $offset ) {
-		return $this->is_valid_post_offset( $offset );
+		$query = new \WC_Order_Query(
+			[
+				'type'   => 'shop_order',
+				'return' => 'ids',
+				'id'     => $offset
+			]
+		);
+
+		$orders = $query->get_orders();
+		return !empty( $orders );
 	}
 }

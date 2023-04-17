@@ -11,6 +11,7 @@ namespace WPGraphQL\WooCommerce;
 use WPGraphQL\WooCommerce\Data\Loader\WC_Customer_Loader;
 use WPGraphQL\WooCommerce\Data\Loader\WC_CPT_Loader;
 use WPGraphQL\WooCommerce\Data\Loader\WC_Db_Loader;
+use WPGraphQL\WooCommerce\Data\Loader\WC_Order_Loader;
 use WPGraphQL\WooCommerce\Data\Factory;
 
 /**
@@ -255,6 +256,10 @@ class Core_Schema_Filters {
 		// WooCommerce CPT loader.
 		$cpt_loader         = new WC_CPT_Loader( $context );
 		$loaders['wc_post'] = &$cpt_loader;
+
+        // WooCommerce order loader.
+        $order_loader = new WC_Order_Loader( $context );
+        $loaders['wc_order'] = &$order_loader;
 
 		// WooCommerce DB loaders.
 		$cart_item_loader             = new WC_Db_Loader( $context, 'CART_ITEM' );

@@ -67,15 +67,15 @@ class Factory {
 	 * @return Deferred object
 	 * @access public
 	 */
-	public static function resolve_crud_object( $id, AppContext $context ) {
+	public static function resolve_crud_object( $id, AppContext $context, $loader_type = 'wc_post' ) {
 		if ( empty( $id ) || ! absint( $id ) ) {
 			return null;
 		}
 
-		$context->getLoader( 'wc_post' )->buffer( [ $id ] );
+		$context->get_loader( $loader_type )->buffer( [ $id ] );
 		return new Deferred(
-			function () use ( $id, $context ) {
-				return $context->getLoader( 'wc_post' )->load( $id );
+			function () use ( $id, $context, $loader_type ) {
+				return $context->get_loader( $loader_type )->load( $id );
 			}
 		);
 	}

@@ -12,11 +12,14 @@ namespace WPGraphQL\WooCommerce\Connection;
 use GraphQL\Type\Definition\ResolveInfo;
 use WPGraphQL\AppContext;
 use WPGraphQL\Data\Connection\PostObjectConnectionResolver;
+use WPGraphQL\WooCommerce\Data\Connection\Order_Connection_Resolver;
+use WPGraphQL\WooCommerce\Data\Connection\Refund_Connection_Resolver;
 
 /**
  * Class - Orders
  */
 class Orders {
+	use \WPGraphQL\WooCommerce\HPOS_Compatibility;
 
 	/**
 	 * Registers the various connections from other Types to Customer
@@ -32,7 +35,7 @@ class Orders {
 					'fromType'      => 'Customer',
 					'fromFieldName' => 'orders',
 					'resolve'       => function( $source, array $args, AppContext $context, ResolveInfo $info ) {
-						$resolver = new PostObjectConnectionResolver( $source, $args, $context, $info, 'shop_order' );
+						$resolver = new Order_Connection_Resolver( $source, $args, $context, $info );
 
 						return self::get_customer_order_connection( $resolver, $source );
 					},
@@ -60,7 +63,7 @@ class Orders {
 					'fromFieldName'  => 'refunds',
 					'connectionArgs' => self::get_refund_connection_args(),
 					'resolve'        => function( $source, array $args, AppContext $context, ResolveInfo $info ) {
-						$resolver = new PostObjectConnectionResolver( $source, $args, $context, $info, 'shop_order_refund' );
+						$resolver = new Refund_Connection_Resolver( $source, $args, $context, $info );
 
 						$resolver->set_query_arg( 'post_parent', $source->ID );
 
@@ -79,7 +82,7 @@ class Orders {
 					'fromFieldName'  => 'refunds',
 					'connectionArgs' => self::get_refund_connection_args(),
 					'resolve'        => function( $source, array $args, AppContext $context, ResolveInfo $info ) {
-						$resolver = new PostObjectConnectionResolver( $source, $args, $context, $info, 'shop_order_refund' );
+						$resolver = new Refund_Connection_Resolver( $source, $args, $context, $info );
 
 						$customer_orders = \wc_get_orders(
 							[
@@ -108,18 +111,39 @@ class Orders {
 	 * @return array
 	 */
 	private static function get_customer_order_connection( $resolver, $customer ) {
+		$billing_email = $customer->get_billing_email();
+		$customer_id   = $customer->get_id();
+
 		// If not "billing email" or "ID" set bail early by returning an empty connection.
-		if ( empty( $customer->get_billing_email() ) && empty( $customer->get_id() ) ) {
+		if ( empty( $billing_email ) && empty( $customer_id ) ) {
 			return [];
 		}
 
 		// If the querying user has a "billing email" set filter orders by user's billing email, otherwise filter by user's ID.
-		$meta_key   = ! empty( $customer->get_billing_email() ) ? '_billing_email' : '_customer_user';
-		$meta_value = ! empty( $customer->get_billing_email() )
-			? $customer->get_billing_email()
-			: $customer->get_id();
-		$resolver->set_query_arg( 'meta_key', $meta_key );
-		$resolver->set_query_arg( 'meta_value', $meta_value );
+		if( self::hpos_is_enabled() ) {
+			if( empty( $billing_email ) ) {
+				$resolver->set_query_arg( 'customer_id', $customer_id );
+			}
+			else {
+				$resolver->set_query_arg( 
+					'field_query',
+					[
+						[
+							'field' => 'billing_email',
+							'value' =>  $billing_email
+						] 
+					]
+				);
+			}
+		}
+		else {
+			$meta_key   = ! empty( $billing_email ) ? '_billing_email' : '_customer_user';
+			$meta_value = ! empty( $billing_email )
+				? $billing_email
+				: $customer_id;
+			$resolver->set_query_arg( 'meta_key', $meta_key );
+			$resolver->set_query_arg( 'meta_value', $meta_value );
+		}
 
 		return $resolver->get_connection();
 	}
@@ -153,9 +177,6 @@ class Orders {
 	 * @return array
 	 */
 	public static function get_connection_config( $args = [], $post_type = 'shop_order' ): array {
-		// Get Post type object for use in connection resolve function.
-		$post_object = get_post_type_object( $post_type );
-
 		return array_merge(
 			[
 				'fromType'       => 'RootQuery',
@@ -163,23 +184,23 @@ class Orders {
 				'fromFieldName'  => 'orders',
 				'connectionArgs' => self::get_connection_args( 'private' ),
 				'queryClass'     => '\WC_Order_Query',
-				'resolve'        => function( $source, array $args, AppContext $context, ResolveInfo $info ) use ( $post_object ) {
+				'resolve'        => function( $source, array $args, AppContext $context, ResolveInfo $info ) use ( $post_type ) {
 					// Check if user shop manager.
-					$not_manager = ! current_user_can( $post_object->cap->edit_posts );
+					$not_manager = ! current_user_can( 'edit_shop_orders' );
 
 					// Remove any arguments that require querying user to have "shop manager" role.
-					$args = $not_manager && 'shop_order' === $post_object->name
+					$args = $not_manager && 'shop_order' === $post_type
 						? \array_intersect_key( $args, array_keys( self::get_connection_args( 'public' ) ) )
 						: $args;
 
 					// Initialize connection resolver.
-					$resolver = new PostObjectConnectionResolver( $source, $args, $context, $info, $post_object->name );
+					$resolver = new Order_Connection_Resolver( $source, $args, $context, $info );
 
 					/**
 					 * If not shop manager, restrict results to orders/refunds owned by querying user
 					 * and return the connection.
 					 */
-					if ( 'shop_order_refund' === $post_object->name ) {
+					if ( 'shop_order_refund' === $post_type ) {
 						$empty_results = [
 							'pageInfo' => null,
 							'nodes'    => [],

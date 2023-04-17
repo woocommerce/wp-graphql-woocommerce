@@ -42,21 +42,21 @@ class Order extends WC_Post {
 	 */
 	protected function get_restricted_cap() {
 		if ( ! empty( $this->data->post_password ) ) {
-			return $this->post_type_object->cap->edit_others_posts;
+			return 'edit_others_shop_orders';
 		}
 		switch ( $this->data->post_status ) {
 			case 'trash':
-				$cap = $this->post_type_object->cap->edit_posts;
+				$cap = 'edit_shop_orders';
 				break;
 			case 'draft':
 			case 'future':
 			case 'pending':
-				$cap = $this->post_type_object->cap->edit_others_posts;
+				$cap = 'edit_others_shop_orders';
 				break;
 			default:
 				$cap = '';
 				if ( ! $this->owner_matches_current_user() ) {
-					$cap = $this->post_type_object->cap->edit_posts;
+					$cap = 'edit_shop_orders';
 				}
 				break;
 		}

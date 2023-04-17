@@ -19,15 +19,8 @@ use WPGraphQL\WooCommerce\Model\Refund;
 
 /**
  * Class Refund_Connection_Resolver
- *
- * @deprecated v0.10.0
  */
 class Refund_Connection_Resolver extends AbstractConnectionResolver {
-	/**
-	 * Include CPT Loader connection common functions.
-	 */
-	use WC_CPT_Loader_Common;
-
 	/**
 	 * The name of the post type, or array of post types the connection resolver is resolving for
 	 *
@@ -60,7 +53,7 @@ class Refund_Connection_Resolver extends AbstractConnectionResolver {
 	 * @return string
 	 */
 	public function get_loader_name() {
-		return 'wc_post';
+		return 'wc_order';
 	}
 
 	/**
@@ -71,7 +64,7 @@ class Refund_Connection_Resolver extends AbstractConnectionResolver {
 	 * @return mixed|Refund|null
 	 */
 	public function get_node_by_id( $id ) {
-		return $this->get_cpt_model_by_id( $id );
+		return new Refund( $id );
 	}
 
 	/**
@@ -80,9 +73,8 @@ class Refund_Connection_Resolver extends AbstractConnectionResolver {
 	 * @return bool
 	 */
 	public function should_execute() {
-		$post_type_obj = get_post_type_object( 'shop_order_refund' );
 		switch ( true ) {
-			case current_user_can( $post_type_obj->cap->edit_posts ):
+			case current_user_can( 'edit_shop_orders' ):
 			case is_a( $this->source, Order::class ) && 'refunds' === $this->info->fieldName:
 			case is_a( $this->source, Customer::class ) && 'refunds' === $this->info->fieldName:
 				return true;
@@ -196,7 +188,7 @@ class Refund_Connection_Resolver extends AbstractConnectionResolver {
 	 *
 	 * @return array
 	 */
-	public function get_ids() {
+	public function get_ids_from_query() {
 		return ! empty( $this->query->get_orders() ) ? $this->query->get_orders() : [];
 	}
 
@@ -282,6 +274,15 @@ class Refund_Connection_Resolver extends AbstractConnectionResolver {
 	 * @return bool
 	 */
 	public function is_valid_offset( $offset ) {
-		return $this->is_valid_post_offset( $offset );
+		$query = new \WC_Order_Query(
+			[
+				'type'   => 'shop_order_refund',
+				'return' => 'ids',
+				'id'     => $offset
+			]
+		);
+
+		$refunds = $query->get_orders();
+		return ! empty( $refunds );
 	}
 }
