@@ -38,10 +38,10 @@ jobs:
     name: WordPress ${{ matrix.wordpress }} on PHP ${{ matrix.php }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@0717577d45739eb3c851188b29f50ed6c0b2194e # v2
 
       - name: Install PHP
-        uses: shivammathur/setup-php@v2
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
         with:
           php-version: ${{ matrix.php }}
           extensions: json, mbstring
@@ -71,7 +71,7 @@ jobs:
 
       - name: Test & publish code coverage
         if: ${{ matrix.coverage == '--coverage --coverage-xml' }}
-        uses: paambaati/codeclimate-action@v2.7.5
+        uses: paambaati/codeclimate-action@7bcf9e73c0ee77d178e72c0ec69f1a99c1afc1f3 # v2.7.5
         env:
           CC_TEST_REPORTER_ID: 739347fbfc0caa4e7f25069899203df2d4a411b3cbc9c3b1ef28257520c99d31
         with:
